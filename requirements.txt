@@ -1,0 +1,12 @@
+ipywidgets
+scikit-learn
+matplotlib
+seaborn
+torch==2.5.1
+openai==1.55.0
+transformers==4.46.3
+datasets==3.1.0
+httpx==0.27.2
+haversine
+fastapi
+uvicorn[standard]

@@ -1,0 +1,27 @@
+# API KEYs
+keys.json
+api_key.txt
+map_key.txt
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtualenv
+.env/
+venv/
+
+# Docker
+*.log
+*.pid
+*.seed
+*.pid.lock
+docker-compose.override.yml
+
+# IDE
+.vscode/
+
+# Audio file
+*.wav
+audio/
