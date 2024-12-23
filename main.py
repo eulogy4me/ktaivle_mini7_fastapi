@@ -29,7 +29,6 @@ Recog = md.GetDistance(
     public_data_service=public_data_service
 )
 
-# 위치 매핑 데이터 로드
 point = pd.read_csv(BASE_PATH + 'audio_location.csv')
 
 @app.get("/")
@@ -42,62 +41,66 @@ def test_endpoint():
 
 @app.get("/fastapi_hospital/{filename}")
 async def process_pipeline(filename: str):
-    """
-    파이프라인 실행:
-    1. 오디오 → 텍스트 변환
-    2. 텍스트 요약 및 위험도 판단
-    3. 병원 추천
-    """
-    # Step 1: 오디오 파일 경로 확인
-    audio_filepath = os.path.join(AUDIO_PATH, filename)
-    if not os.path.exists(audio_filepath):
-        raise HTTPException(status_code=404, detail="오디오 파일을 찾을 수 없습니다.")
 
-    # Step 2: audio_location.csv에서 위도, 경도 찾기
     try:
+        audio_filepath = os.path.join(AUDIO_PATH, filename)
+        if not os.path.exists(audio_filepath):
+            raise HTTPException(status_code=404, detail="오디오 파일을 찾을 수 없습니다.")
+        
         matching_row = point[point["filename"] == filename]
         if matching_row.empty:
             raise HTTPException(status_code=404, detail="위도 및 경도 정보를 찾을 수 없습니다.")
+        
         latitude = matching_row.iloc[0]["위도"]
         longitude = matching_row.iloc[0]["경도"]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"위치 매핑 처리 실패: {str(e)}")
 
-    # Step 3: 오디오 → 텍스트 변환
-    try:
         text_result = A2T.audio_to_text(AUDIO_PATH, filename)
+        
         if not text_result:
             raise HTTPException(status_code=500, detail="오디오 처리 실패")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"오디오 처리 중 오류 발생: {str(e)}")
 
-    # Step 4: 텍스트 요약 및 응급 여부 판단
-    try:
-        # 텍스트 요약
         summary = A2T.text_summary(text_result)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"텍스트 요약 중 오류 발생: {str(e)}")
-    
-    try:
-        # 모델 예측
         model_result = Bert.test(summary['content'])
+    
+        if not model_result["emergency"]:
+            return{"message": "응급 상황이 아닌 것으로 판단됨"}
+    
+        hospitals = Recog.recommend_hospital(latitude, longitude)\
+
+        if not hospitals:
+            return {"message": "응급 상황으로 판단되었지만, 추천할 병원이 없습니다.",
+                    "model_result": model_result}
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"모델 처리 중 오류 발생: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"{str(e)}")
+
+    return {
+        "summary": summary["content"],
+        "keyword": summary["keyword"],
+        "danger_level": model_result["class_name"],
+        "audio_latitude": latitude,
+        "audio_longitude": longitude,
+        "recommended_hospitals": hospitals
+    }
     
-    # 응급 상황 여부 확인
-    if not model_result["emergency"]:
-        return{"message": "응급 상황이 아닌 것으로 판단됨"}
-    
-    # Step 5: 병원 추천 (응급 상황인 경우에만 진행)
+@app.get("/Hospital2String/{context}/{latitude}/{longitude}")
+async def process_pipeline(context: str, latitude: float, longitude: float):
+
     try:
+        summary = A2T.text_summary(context)
+        model_result = Bert.test(summary['content'])
+    
+        if not model_result["emergency"]:
+            return{"message": "응급 상황이 아닌 것으로 판단됨"}
+    
         hospitals = Recog.recommend_hospital(latitude, longitude)
         if not hospitals:
             return {"message": "응급 상황으로 판단되었지만, 추천할 병원이 없습니다.",
                     "model_result": model_result}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"병원 추천 중 오류 발생: {str(e)}")
 
-    # Step 6: 결과 반환
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"{str(e)}")
+    
     return {
         "summary": summary["content"],
         "keyword": summary["keyword"],
