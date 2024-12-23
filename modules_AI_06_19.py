@@ -19,19 +19,6 @@ filterwarnings('ignore')
 
 import json
 
-# json 형태로 저장된 api 키들 호출하는 클래스
-def load_api_keys(filename):
-    try:
-        with open(filename, 'r') as file:
-            keys = json.load(file)
-            return keys
-    except FileNotFoundError:
-        print("Error: File not found.")
-        return {}
-    except json.JSONDecodeError as e:
-        print(f"Error in decoding JSON: {e}")
-        return {}
-
 # 공공데이터포털 클래스
 class PublicData():
     def __init__(self, service) :
@@ -159,78 +146,82 @@ class AudioTextProcessor:
         except Exception as e:
             return str(e)
 
-# Bert모델 학습 클래스 
-# class BertModel:
-#     def __init__(self, model_name='klue/bert-base', num_labels=5, batch_size=32, learning_rate=2e-5, epochs=5):
-#         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-#         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-#         self.model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=num_labels).to(self.device)
-#         self.le = LabelEncoder()
-#         self.trainer = self.initTrainer(batch_size, learning_rate, epochs)
+class BertModel:
+    def __init__(self, model_name='klue/bert-base', num_labels=5, batch_size=32, learning_rate=2e-5, epochs=5):
+        from sklearn.preprocessing import LabelEncoder
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=num_labels).to(self.device)
+        self.le = LabelEncoder()
+        self.trainer = self.initTrainer(batch_size, learning_rate, epochs)
 
-#     def preprocess_function(self, data):
-#         return self.tokenizer(data['text'], truncation=True, padding=True, max_length=128)
+    def preprocess_function(self, data):
+        return self.tokenizer(data['text'], truncation=True, padding=True, max_length=128)
 
-#     def initData(self, csv):
-#         data = pd.read_csv(csv)
-#         data['text'] = data['text'].str.replace('"', '').str.replace(',', '')
-#         data['label'] = self.le.fit_transform(data['label'])
-#         train, val = train_test_split(data, test_size=0.2, random_state=42)
-#         train_ds = Dataset.from_pandas(train)
-#         val_ds = Dataset.from_pandas(val)
-#         train_ds = train_ds.map(self.preprocess_function, batched=True)
-#         val_ds = val_ds.map(self.preprocess_function, batched=True)
-#         return train_ds, val_ds
+    def initData(self, csv):
+        from sklearn.model_selection import train_test_split
+        from datasets import load_dataset, Dataset
+        data = pd.read_csv(csv)
+        data['text'] = data['text'].str.replace('"', '').str.replace(',', '')
+        data['label'] = self.le.fit_transform(data['label'])
+        train, val = train_test_split(data, test_size=0.2, random_state=42)
+        train_ds = Dataset.from_pandas(train)
+        val_ds = Dataset.from_pandas(val)
+        train_ds = train_ds.map(self.preprocess_function, batched=True)
+        val_ds = val_ds.map(self.preprocess_function, batched=True)
+        return train_ds, val_ds
 
-#     def initTrainer(self, batch_size, learning_rate, epochs):
-#         return Trainer(
-#             model=self.model,
-#             args=TrainingArguments(
-#                 output_dir='./results',
-#                 eval_strategy="epoch",
-#                 save_strategy="epoch",
-#                 learning_rate=learning_rate,
-#                 per_device_train_batch_size=batch_size,
-#                 per_device_eval_batch_size=batch_size,
-#                 num_train_epochs=epochs,
-#                 weight_decay=0.02,
-#                 load_best_model_at_end=True,
-#                 logging_dir='./logs',
-#                 logging_steps=10,
-#                 report_to="tensorboard"
-#             ),
-#             train_dataset=self.train_ds,
-#             eval_dataset=self.val_ds,
-#             tokenizer=self.tokenizer,
-#             callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
-#         )
+    def initTrainer(self, batch_size, learning_rate, epochs):
+        return Trainer(
+            model=self.model,
+            args=TrainingArguments(
+                output_dir='./results',
+                eval_strategy="epoch",
+                save_strategy="epoch",
+                learning_rate=learning_rate,
+                per_device_train_batch_size=batch_size,
+                per_device_eval_batch_size=batch_size,
+                num_train_epochs=epochs,
+                weight_decay=0.02,
+                load_best_model_at_end=True,
+                logging_dir='./logs',
+                logging_steps=10,
+                report_to="tensorboard"
+            ),
+            train_dataset=self.train_ds,
+            eval_dataset=self.val_ds,
+            tokenizer=self.tokenizer,
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
+        )
 
-#     def evaluate(self):
-#         inputs = self.tokenizer(self.val_ds['text'], return_tensors="pt", padding=True, truncation=True, max_length=128)
-#         inputs = {key: value.to(self.device) for key, value in inputs.items()}
-#         self.model = self.model.to(self.device)
-#         with torch.no_grad():
-#             probabilities = self.model(**inputs).logits.softmax(dim=1)
-#         return np.argmax(probabilities.cpu().detach().numpy(), axis=1)
+    def evaluate(self):
+        inputs = self.tokenizer(self.val_ds['text'], return_tensors="pt", padding=True, truncation=True, max_length=128)
+        inputs = {key: value.to(self.device) for key, value in inputs.items()}
+        self.model = self.model.to(self.device)
+        with torch.no_grad():
+            probabilities = self.model(**inputs).logits.softmax(dim=1)
+        return np.argmax(probabilities.cpu().detach().numpy(), axis=1)
 
-#     def predict(self, text):
-#         inputs = {key: value.to(self.device) for key, value in self.tokenizer(text, return_tensors="pt", truncation=True, padding=True).items()}
-#         self.model = self.model.to(self.device)
-#         with torch.no_grad():
-#             probabilities = self.model(**inputs).logits.softmax(dim=1)
-#         return torch.argmax(probabilities, dim=-1).item(), probabilities
+    def predict(self, text):
+        inputs = {key: value.to(self.device) for key, value in self.tokenizer(text, return_tensors="pt", truncation=True, padding=True).items()}
+        self.model = self.model.to(self.device)
+        with torch.no_grad():
+            probabilities = self.model(**inputs).logits.softmax(dim=1)
+        return torch.argmax(probabilities, dim=-1).item(), probabilities
 
-#     def TrainAndEvaluate(self):
-#         self.trainer.train()
-#         eval_results = self.trainer.evaluate()
-#         pred = self.evaluate()
-#         print(eval_results)
-#         print(confusion_matrix(self.val_ds['label'], pred))
-#         print(classification_report(self.val_ds['label'], pred))
+    def TrainAndEvaluate(self):
+        from sklearn.metrics import confusion_matrix, classification_report
 
-#     def SaveModel(self, savepath):
-#         self.model.save_pretrained(savepath)
-#         self.tokenizer.save_pretrained(savepath)
+        self.trainer.train()
+        eval_results = self.trainer.evaluate()
+        pred = self.evaluate()
+        print(eval_results)
+        print(confusion_matrix(self.val_ds['label'], pred))
+        print(classification_report(self.val_ds['label'], pred))
+
+    def SaveModel(self, savepath):
+        self.model.save_pretrained(savepath)
+        self.tokenizer.save_pretrained(savepath)
 
 # Tuned Bert Model 활용 클래스 
 class ModelInstance :
@@ -254,7 +245,7 @@ class ModelInstance :
             "emergency": False,
             "message": "응급상황이 아닙니다.",
             "predicted_class": predicted_class,
-            "probabilities": probabilities.tolist()  # Tensor를 리스트로 변환
+            "probabilities": probabilities.tolist()
             }
 
         print(f"예측된 클래스: {predicted_class}")
@@ -265,7 +256,7 @@ class ModelInstance :
             "emergency": True,
             "predicted_class": predicted_class,
             "class_name": f"{predicted_class + 1}등급",
-            "probabilities": probabilities.tolist() # Tensor를 리스트로 변환환
+            "probabilities": probabilities.tolist()
         }
 
 # 응급실 관련 클래스
@@ -346,7 +337,6 @@ class GetDistance:
                     "phone3": hospital.Phone3,
                     "hospital_latitude": hospital.Latitude,
                     "hospital_longitude": hospital.Longitude
-                    
                 })
         # 주행 거리 기준으로 정렬
         results = sorted(results, key=lambda x: x['distance_km'])[:3]

@@ -6,36 +6,31 @@ import openai
 import modules_AI_06_19 as md
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
-# FastAPI 앱 초기화
+
 app = FastAPI()
 
-# 경로 설정
-path = "./"  # 프로젝트의 루트 경로
-audio_path = os.path.join(path, "audio/")
-location_csv = os.path.join(path, "audio_location.csv")
-emergency_data_csv = os.path.join(path, "emergen_df.csv")
-model_path = os.path.join(path, "fine_tuned_bert/")
+BASE_PATH = "./"
+AUDIO_PATH = os.path.join(BASE_PATH, "audio/")
+LOCATION_CSV = os.path.join(BASE_PATH, "audio_location.csv")
+EMERGENCY_DATA_CSV = os.path.join(BASE_PATH, "emergen_df.csv")
+MODEL_PATH = os.path.join(BASE_PATH, "fine_tuned_bert/")
 
-# OpenAI 및 기타 API 키 로드
-openapi = md.load_api_keys("keys.json")
-openai.api_key = openapi["openapi"]
-os.environ["OPENAI_API_KEY"] = openai.api_key
-service = openapi["service"]
-c_id, c_key = openapi["c_id"], openapi["c_key"]
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+SERVICE_KEY = os.getenv('SERVICE_KEY')
+CLIENT_ID, CLIENT_SECRET = os.getenv('CLIENT_ID'), os.getenv('CLIENT_SECRET')
 
-# 모델 및 필요한 객체 초기화
-A2T = md.AudioTextProcessor(api_key=openai.api_key)
-Bert = md.ModelInstance(loadpath=model_path)
-public_data_service = md.PublicData(service=service)
+A2T = md.AudioTextProcessor(api_key=OPENAI_API_KEY)
+Bert = md.ModelInstance(loadpath=MODEL_PATH)
+public_data_service = md.PublicData(service=SERVICE_KEY)
 Recog = md.GetDistance(
-    csv=emergency_data_csv,
-    c_id=c_id,
-    c_key=c_key,
+    csv=EMERGENCY_DATA_CSV,
+    c_id=CLIENT_ID,
+    c_key=CLIENT_SECRET,
     public_data_service=public_data_service
 )
 
 # 위치 매핑 데이터 로드
-point = pd.read_csv(location_csv)
+point = pd.read_csv(BASE_PATH + 'audio_location.csv')
 
 @app.get("/")
 def read_root():
@@ -44,7 +39,6 @@ def read_root():
 @app.get("/test")
 def test_endpoint():
     return {"message": "This is a test endpoint. Working fine!!!!!!!!!!!!!!!!!!!!!!"}
-
 
 @app.get("/fastapi_hospital/{filename}")
 async def process_pipeline(filename: str):
@@ -55,7 +49,7 @@ async def process_pipeline(filename: str):
     3. 병원 추천
     """
     # Step 1: 오디오 파일 경로 확인
-    audio_filepath = os.path.join(audio_path, filename)
+    audio_filepath = os.path.join(AUDIO_PATH, filename)
     if not os.path.exists(audio_filepath):
         raise HTTPException(status_code=404, detail="오디오 파일을 찾을 수 없습니다.")
 
@@ -71,7 +65,7 @@ async def process_pipeline(filename: str):
 
     # Step 3: 오디오 → 텍스트 변환
     try:
-        text_result = A2T.audio_to_text(audio_path, filename)
+        text_result = A2T.audio_to_text(AUDIO_PATH, filename)
         if not text_result:
             raise HTTPException(status_code=500, detail="오디오 처리 실패")
     except Exception as e:
