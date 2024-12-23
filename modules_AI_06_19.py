@@ -223,7 +223,6 @@ class BertModel:
         self.model.save_pretrained(savepath)
         self.tokenizer.save_pretrained(savepath)
 
-# Tuned Bert Model 활용 클래스 
 class ModelInstance :
     def __init__(self, loadpath):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
