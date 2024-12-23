@@ -138,7 +138,6 @@ class AudioTextProcessor:
             response = response.choices[0].message.content
             print("summary response : ", response)
             
-            #JSON 파싱
             return json.loads(response)
         except json.JSONDecodeError as e:
             print("JSON parsing error:", e)
