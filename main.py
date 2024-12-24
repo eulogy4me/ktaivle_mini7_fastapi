@@ -29,8 +29,6 @@ Recog = md.GetDistance(
     public_data_service=public_data_service
 )
 
-point = pd.read_csv(BASE_PATH + 'audio_location.csv')
-
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the FastAPI application!"}
@@ -43,6 +41,7 @@ def test_endpoint():
 async def process_pipeline(filename: str):
 
     try:
+        point = pd.read_csv(BASE_PATH + 'audio_location.csv')
         audio_filepath = os.path.join(AUDIO_PATH, filename)
         if not os.path.exists(audio_filepath):
             raise HTTPException(status_code=404, detail="오디오 파일을 찾을 수 없습니다.")
