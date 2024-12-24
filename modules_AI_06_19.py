@@ -337,7 +337,7 @@ class GetDistance:
                     "hospital_longitude": hospital.Longitude
                 })
         # 주행 거리 기준으로 정렬
-        results = sorted(results, key=lambda x: x['distance_km'])[:3]
+        results = sorted(results, key=lambda x: x['distance_km'])
         return results
  
     
