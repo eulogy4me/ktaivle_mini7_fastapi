@@ -21,6 +21,7 @@ docker-compose.override.yml
 
 # IDE
 .vscode/
+*.ini
 
 # Audio file
 *.wav
