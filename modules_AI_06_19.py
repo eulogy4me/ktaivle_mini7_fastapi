@@ -265,6 +265,8 @@ class GetDistance:
         self.c_key = c_key
         self.public_data = public_data_service
 
+
+
     def _filter_nearby_hospitals(self, slat, slon, alpha):
         min_lat, max_lat = slat - alpha, slat + alpha
         min_lon, max_lon = slon - alpha, slon + alpha
@@ -290,7 +292,7 @@ class GetDistance:
         response = requests.get(url, headers=headers, params=params)
         return response.json()['route']['trafast'][0]['summary']['distance'] if response.status_code == 200 else math.inf
 
-    def recommend_hospital(self, slat, slon, alpha=0.1):
+    def recommend_hospital(self, slat, slon,recog_num,alpha=0.1):
         # Step1 : Haversine 거리 기반 후보 병원 10개 선정
         filtered_df = self._filter_nearby_hospitals(slat, slon, alpha)
 
@@ -336,8 +338,15 @@ class GetDistance:
                     "hospital_latitude": hospital.Latitude,
                     "hospital_longitude": hospital.Longitude
                 })
+                
+    
         # 주행 거리 기준으로 정렬
-        results = sorted(results, key=lambda x: x['distance_km'])[:3]
+        if recog_num <= len(results):
+            results = sorted(results, key=lambda x: x['distance_km'])[:recog_num]
+            #print(results)
+        else:
+            results=sorted(results,key=lambda x: x['distance_km'])[:3]
+            #print(results)
         return results
  
     
