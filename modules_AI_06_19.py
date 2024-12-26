@@ -257,7 +257,6 @@ class ModelInstance :
             "probabilities": probabilities.tolist()
         }
 
-# 응급실 관련 클래스
 class GetDistance:
     def __init__(self, csv, c_id, c_key, public_data_service):
         self.df = pd.read_csv(csv)
@@ -291,7 +290,6 @@ class GetDistance:
         return response.json()['route']['trafast'][0]['summary']['distance'] if response.status_code == 200 else math.inf
 
     def recommend_hospital(self, slat, slon, alpha=0.1):
-        # Step1 : Haversine 거리 기반 후보 병원 10개 선정
         filtered_df = self._filter_nearby_hospitals(slat, slon, alpha)
 
         if filtered_df.empty:
@@ -308,7 +306,6 @@ class GetDistance:
             print(f"Error processing hospital data: {e}")
             return []
 
-        # Step 2 : 국립중앙의료원 API로 실시간 데이터 확인
         valid_hospitals = []
         for candidate in candidates:
             duty_code = candidate[1].DutyCode
@@ -320,7 +317,6 @@ class GetDistance:
             print("No hospitals with available beds found.")
             return []
         
-        # Step 3 : Naver 지도 API로 주행 거리 계산
         results = []
         for distance, hospital in valid_hospitals:
             driving_distance = self._get_driving_distance(slat, slon, hospital.Latitude, hospital.Longitude)
@@ -336,8 +332,8 @@ class GetDistance:
                     "hospital_latitude": hospital.Latitude,
                     "hospital_longitude": hospital.Longitude
                 })
-        # 주행 거리 기준으로 정렬
-        results = sorted(results, key=lambda x: x['distance_km'])[:3]
+
+        results = sorted(results, key=lambda x: x['distance_km'])
         return results
  
     
