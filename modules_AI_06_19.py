@@ -19,7 +19,6 @@ filterwarnings('ignore')
 
 import json
 
-# 공공데이터포털 클래스
 class PublicData():
     def __init__(self, service) :
         self.service = service
@@ -60,7 +59,7 @@ class PublicData():
                         'wgs84Lon': item.findtext('wgs84Lon'),
                         'wgs84Lat': item.findtext('wgs84Lat')
                     })
-            time.sleep(1)
+            time.sleep(0.2)
         except requests.exceptions.RequestException as e:
             print(e)
         df = pd.DataFrame(data)
@@ -91,9 +90,8 @@ class PublicData():
                 return 0
             if hvec > 0:
                 return int(hvec)
-        time.sleep(1)
+        time.sleep(0.2)
 
-# TTS, Summary 클래스
 class AudioTextProcessor:
     def __init__(self, api_key):
         self.client = openai.OpenAI(api_key=api_key)
