@@ -9,7 +9,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 app = FastAPI()
 
-BASE_PATH = "./"
+BASE_PATH = os.path.getcwd()
 AUDIO_PATH = os.path.join(BASE_PATH, "audio/")
 LOCATION_CSV = os.path.join(BASE_PATH, "audio_location.csv")
 EMERGENCY_DATA_CSV = os.path.join(BASE_PATH, "emergen_df.csv")
@@ -83,7 +83,7 @@ async def process_pipeline(filename: str):
     }
     
 @app.get("/Hospital2String/{context}/{latitude}/{longitude}")
-async def process_pipeline(context: str, latitude: float, longitude: float):
+async def process_pipeline2(context: str, latitude: float, longitude: float):
 
     try:
         summary = A2T.text_summary(context)
